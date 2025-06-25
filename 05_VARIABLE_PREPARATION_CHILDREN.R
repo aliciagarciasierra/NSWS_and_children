@@ -40,6 +40,7 @@ for (prefix in prefixes) {
   }
 }
 
+
 #------------------------------------------------------------- #
 #---------Physical Health variables ---------#
 #------------------------------------------------------------- #
@@ -133,6 +134,27 @@ rename_map <- setNames(new_names, qnames)
 names(data)[names(data) %in% names(rename_map)] <- rename_map[names(data)[names(data) %in% names(rename_map)]]
 
 #------------------------------------------------------------- #
+#---------  Health rating by the mothers ---------#
+#------------------------------------------------------------- #
+
+#This variable was not collected for 1990, so let's create one with NAs.
+data$healthrating_1990<-NA
+
+# Now normal processing
+qnames <- c("healthrating_1990", "MS921515_1992", "MS941711_1994", "MS961711_1996", "MS985019A_1998",
+            "BKGN-46A_2000", "0	BKGN-46A_2002", "BKGN-46A_2004",
+            "MS-BKGN-46A_2006", "MS-BKGN-46A_2008", "MS-BKGN-46A_2010", 
+            "MS-BKGN-46A_2012", "MS-BKGN-46A_2014", "MS-BKGN-46A_2016", "MS-BKGN-46A_2018")
+
+# New variable names
+new_names <- paste0("healthrating_", years)
+# Create named vector
+rename_map <- setNames(new_names, qnames)
+# Rename
+names(data)[names(data) %in% names(rename_map)] <- rename_map[names(data)[names(data) %in% names(rename_map)]]
+
+
+#------------------------------------------------------------- #
 #--------- Mental Health variables ---------#
 #------------------------------------------------------------- #
 
@@ -163,6 +185,38 @@ rename_map <- setNames(new_names, qnames)
 # Rename
 names(data)[names(data) %in% names(rename_map)] <- rename_map[names(data)[names(data) %in% names(rename_map)]]
 
+#------------------------------------------------------------- #
+#--------- Other variables ---------#
+#------------------------------------------------------------- #
+
+#----- Private health insurance
+qnames <- c("CS902055_1990", "CS922155_1992", "CS94H-13_1994", "CS96H-13_1996", "CS98H-13_1998",
+            "HLTH-14_2000", "HLTH-14_2002", "HLTH-14_2004",
+            "MS-HLTH-14_2006", "MS-HLTH-14_2008", "MS-HLTH-14_2010", 
+            "MS-HLTH-14_2012", "MS-HLTH-14_2014", "MS-HLTH-14_2016", "MS-HLTH-14_2018")
+
+
+# New variable names
+new_names <- paste0("privateinsurance_", years)
+# Create named vector
+rename_map <- setNames(new_names, qnames)
+# Rename
+names(data)[names(data) %in% names(rename_map)] <- rename_map[names(data)[names(data) %in% names(rename_map)]]
+
+#----- Medicaid 
+qnames <- c("CS902057_1990", "CS922157_1992", "CS94H-14_1994", "CS96H-14_1996", "CS98H-14_1998",
+            "HLTH-15_2000", "HLTH-15_2002", "HLTH-15_2004",
+            "MS-HLTH-15_2006", "MS-HLTH-15_2008", "MS-HLTH-15_2010", 
+            "MS-HLTH-15_2012", "MS-HLTH-15_2014", "MS-HLTH-15_2016", "MS-HLTH-15_2018")
+
+
+# New variable names
+new_names <- paste0("medicaidinsurance_", years)
+# Create named vector
+rename_map <- setNames(new_names, qnames)
+# Rename
+names(data)[names(data) %in% names(rename_map)] <- rename_map[names(data)[names(data) %in% names(rename_map)]]
+
 
 #------------------------------------------------------------- #
 #---------------- SELECT VARIABLES ---------------- #
@@ -172,7 +226,7 @@ custom_prefixes <- c(
   "homez_", "motoz_", "bpiz_",
   "conditionattendance_", "conditionactivities_", "conditionwork_",
   "conditionmedicines_", "conditionequipment_", "conditiontreatment_",
-  "childmentalhelp_", "childpsychiatrist_"
+  "childmentalhelp_", "childpsychiatrist_", "medicaidinsurance_", "privateinsurance_", "healthrating"
 )
 
 # Plus time-invariant variables
@@ -215,9 +269,9 @@ data_long <- data_long %>%
 
 data_long <- data_long %>% # sum the conditions to try to capture worse health
   rowwise() %>%
-  mutate(physical_health = sum(c_across(all_of(condition_vars)) %>% as.numeric(), na.rm = TRUE)) %>%
+  mutate(health_limiting_conditions = sum(c_across(all_of(condition_vars)) %>% as.numeric(), na.rm = TRUE)) %>%
   ungroup()
-table(data_long$physical_health)
+table(data_long$health_limiting_conditions)
 
 #-------- MENTAL HEALTH
 
@@ -229,6 +283,41 @@ data_long <- data_long %>%
   ))
 table(data_long$mental_health)
 
+#-------- HEALTH INSURANCE
+
+data_long <- data_long %>% 
+  mutate(
+  health_insurance = case_when(
+    privateinsurance == 1 ~ 1,
+    medicaidinsurance == 1 ~ 2,
+    TRUE ~ 0
+  )
+)
+table(data_long$health_insurance)
+
+
+#------------- CHILD AGE
+
+# Plot the distribution of birthyear
+data_long %>%
+  distinct(childID, birthyear) %>%
+  count(birthyear) %>%
+  ggplot(aes(x = birthyear, y = n)) +
+  geom_col() +
+  labs(title = "Number of children per birthyear",
+       x = "Birthyear",
+       y = "Number of children") +
+  theme_minimal()
+table(data$childage)
+data_long %>% filter(year - birthyear < 0) %>% select(childID, year, birthyear, childage)
+
+
+data_long$childage<-data_long$year-data_long$birthyear
+table(data_long$childage)
+
+# Remove outliers in age
+data <- data %>%
+  filter(childage >= 0 & childage <= 15)
 
 #------------------------------------------------------------- #
 #---------------- SAVE DATA ---------------- #

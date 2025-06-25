@@ -2,7 +2,11 @@
 ##################################################################
 ######### MERGE CHILDREN AND MOTHER ######################
 ###################################################################
-
+#------------- Libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(pilot)
 #------------------------------------------------------------- #
 #---------------- OPEN DATASETS ---------------- #
 #------------------------------------------------------------- #
@@ -40,6 +44,41 @@ children %>%
   count(motherID, name = "n_children") %>%
   count(n_children, name = "n_families")
       
+
+#------------------------------------------------------------- #
+#---------------- FURTHER CLEANING IN THE VARIABLES ---------------- #
+#------------------------------------------------------------- #
+
+# Relabel rece
+table(data$race_child)
+data <- data %>%
+  mutate(race_child = case_when(
+    race_child %in% c(1, 2) ~ 1, # non-white
+    race_child == 3         ~ 0, # white
+    TRUE                    ~ NA_real_  # handles other/missing cases safely
+  ))
+
+# Dichotomous health rating
+table(data$healthrating)
+data$healthrating_dichotomized <- ifelse(data$healthrating %in% c(1, 2), 1, 0)
+table(data$healthrating_dichotomized)
+
+# Create age anchor variable
+data <- data %>%
+  mutate(age_anchor = case_when(
+    childage >= 5 & childage <= 6  ~ "5-6",
+    childage >= 7 & childage <= 8  ~ "7-8",
+    childage >= 9 & childage <= 10 ~ "9-10",
+    childage >= 11 & childage <= 12 ~ "11-12",
+    childage >= 13 & childage <= 14 ~ "13-14",
+    TRUE ~ NA_character_
+  ))
+
+
+#------------------------------------------------------------- #
+#---------------- SAMPLE RESTRICTIONS ---------------- #
+#------------------------------------------------------------- #
+
 #------------------------------------------------------------- #
 #---------------- SAVE DATA ---------------- #
 #------------------------------------------------------------- #
