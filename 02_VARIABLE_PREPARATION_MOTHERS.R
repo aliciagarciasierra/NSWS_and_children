@@ -162,8 +162,8 @@ data$HRP1_2022<-NA
 #---------------------------------------------------- #
 
 # List of all years with shift information
-years <- c(1990, 1991, 1992, 1993, 1994, 1996, 1998, 2000, 2002, 2004, 
-           2008, 2010, 2012, 2014, 2016, 2018, 2020, 2022) # only from 1990 onwards beecause this is the period with more consistent variables
+years <- c(1990,  1992, 1994, 1996, 1998, 2000, 2002, 2004, 
+           2008, 2010, 2012, 2014, 2016, 2018, 2020) # only from 1990 onwards beecause this is the period with more consistent variables
 
 # Create a vector of the shift variable names (shift_ followed by the year)
 shift_vars <- paste0("shift_", years)
@@ -174,6 +174,7 @@ hourlyrate_vars<-paste0("HRP1_", years)
 numch_vars<-paste0("NUMCH_", years)
 healthlimit_vars<-paste0("Q11-4_", years)
 numberjobs<-paste0("JOBSNUM_", years)
+totalincome<-paste0("TNFI_TRUNC_", years)
 
 # Select the variables ID, SEX, RACE, and all shift variables created in the script
 data_selected <- data %>%
@@ -181,10 +182,11 @@ data_selected <- data %>%
          all_of(doi_vars), 
          all_of(marstat_vars),
          all_of(famsize_vars),
-         all_of(health_vars),
+         all_of(hourlyrate_vars),
          all_of(numch_vars),
          all_of(healthlimit_vars),
-         all_of(numberjobs))
+         all_of(numberjobs),
+         all_of(totalincome))
 
 # View the selected data
 head(data_selected)
@@ -195,9 +197,9 @@ head(data_selected)
 
 data_long <- data_selected %>%
   pivot_longer(
-    cols = matches("^(shift_|DOI_EMPLOYED_|MARSTAT-KEY_|FAMSIZE_|HRP1_|NUMCH_|Q11-4_|JOBSNUM_)"),
+    cols = matches("^(shift_|DOI_EMPLOYED_|MARSTAT-KEY_|FAMSIZE_|HRP1_|NUMCH_|Q11-4_|JOBSNUM_|TNFI_TRUNC_)"),
     names_to = c(".value", "year"),
-    names_pattern = "^(shift|DOI_EMPLOYED|MARSTAT-KEY|FAMSIZE|HRP1|NUMCH|Q11-4|JOBSNUM)_(\\d+)"
+    names_pattern = "^(shift|DOI_EMPLOYED|MARSTAT-KEY|FAMSIZE|HRP1|NUMCH|Q11-4|JOBSNUM|TNFI_TRUNC)_(\\d+)"
   ) %>%
   mutate(year = as.numeric(year)) %>%
   arrange(ID, year) %>%
@@ -211,7 +213,8 @@ data_long <- data_selected %>%
     hourlywage = HRP1,
     num_children = NUMCH,
     healthlimit=`Q11-4`,
-    numberjobs=JOBSNUM
+    numberjobs=JOBSNUM,
+    totalincome=TNFI_TRUNC
     
   )
 
