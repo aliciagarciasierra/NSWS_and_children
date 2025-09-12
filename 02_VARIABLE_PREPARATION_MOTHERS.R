@@ -7,74 +7,9 @@
 #---------------- CLEAN WORK SCHEDULES VARIABLE ---------------- #
 #------------------------------------------------------------- #
 
-#------- From 1979 to 1985
-
-data <- data %>%
-  mutate(across(c(`CPS-QES-86A.01_1979`, `CPS-QES-86A.01_1980`, `CPS-QES-86A.01_1981`, 
-                  `CPS-QES-86A.01_1983`, `CPS-QES-86A.01_1984`, `CPS-QES-86A.01_1985`),
-                ~ recode(.,
-                         `1` = "regular_day",
-                         `2` = "regular_evening",
-                         `3` = "regular_night",
-                         `4` = "split_shift",
-                         `5` = "irregular",
-                         `6` = NA_character_),
-                .names = "{.col}_new")) %>%
-  rename_with(~ sub("CPS-QES-86A.01_", "shift_", .x), ends_with("_new")) %>%
-  rename_with(~ sub("_new", "", .x), ends_with("_new"))  # Removes unnecessary suffix
-
-
-#------- 1986 and 1987
-
-data <- data %>%
-  mutate(shift_1986 = case_when(
-    `CPS-QES-86C.01_1986` == 0 ~ "irregular",
-    `CPS-QES-86C.01_1986` >= 1 & `CPS-QES-86C.01_1986` <= 600 ~ "regular_night",
-    `CPS-QES-86C.01_1986` >= 601 & `CPS-QES-86C.01_1986` <= 1500 ~ "regular_day",
-    `CPS-QES-86C.01_1986` >= 1501 & `CPS-QES-86C.01_1986` <= 2100 ~ "regular_evening",
-    `CPS-QES-86C.01_1986` >= 2101 & `CPS-QES-86C.01_1986` <= 2400 ~ "regular_night",
-    TRUE ~ NA_character_
-  ),
-  shift_1987 = case_when(
-    `CPS-QES-86C.01_1987` == 0 ~ "irregular",
-    `CPS-QES-86C.01_1987` >= 1 & `CPS-QES-86C.01_1987` <= 600 ~ "regular_night",
-    `CPS-QES-86C.01_1987` >= 601 & `CPS-QES-86C.01_1987` <= 1500 ~ "regular_day",
-    `CPS-QES-86C.01_1987` >= 1501 & `CPS-QES-86C.01_1987` <= 2100 ~ "regular_evening",
-    `CPS-QES-86C.01_1987` >= 2101 & `CPS-QES-86C.01_1987` <= 2400 ~ "regular_night",
-    TRUE ~ NA_character_
-  ))
-
-
-#------- 1988 and 1989
-
-if("CPS-QES-86A.01_1988" %in% colnames(data) && "CPS-QES-86C.01_1988" %in% colnames(data) &&
-   "CPS-QES-86A.01_1989" %in% colnames(data) && "CPS-QES-86C.01_1989" %in% colnames(data)) {
-  
-  data <- data %>%
-    mutate(
-      shift_1988 = case_when(
-        `CPS-QES-86A.01_1988` == 2 ~ "irregular",
-        `CPS-QES-86C.01_1988` >= 0 & `CPS-QES-86C.01_1988` <= 600 ~ "regular_night",
-        `CPS-QES-86C.01_1988` >= 601 & `CPS-QES-86C.01_1988` <= 1500 ~ "regular_day",
-        `CPS-QES-86C.01_1988` >= 1501 & `CPS-QES-86C.01_1988` <= 2100 ~ "regular_evening",
-        `CPS-QES-86C.01_1988` >= 2101 & `CPS-QES-86C.01_1988` <= 2500 ~ "regular_night",
-        TRUE ~ NA_character_
-      ),
-      shift_1989 = case_when(
-        `CPS-QES-86A.01_1989` == 2 ~ "irregular",
-        `CPS-QES-86C.01_1989` >= 0 & `CPS-QES-86C.01_1989` <= 600 ~ "regular_night",
-        `CPS-QES-86C.01_1989` >= 601 & `CPS-QES-86C.01_1989` <= 1500 ~ "regular_day",
-        `CPS-QES-86C.01_1989` >= 1501 & `CPS-QES-86C.01_1989` <= 2100 ~ "regular_evening",
-        `CPS-QES-86C.01_1989` >= 2101 & `CPS-QES-86C.01_1989` <= 2500 ~ "regular_night",
-        TRUE ~ NA_character_
-      )
-    )
-} 
-
-
 #------- 1990 to 2000
 
-# List of columns to transform
+# Your original list
 columns_to_process <- c(
   "CPS-QES-86A.01_1979", "CPS-QES-86A.01_1980", "CPS-QES-86A.01_1981", 
   "CPS-QES-86A.01_1983", "CPS-QES-86A.01_1984", "CPS-QES-86A.01_1985",
@@ -83,53 +18,57 @@ columns_to_process <- c(
   "QES-86A.01_1998", "QES-86A.01_2000"
 )
 
-# Recode 
-for (column in columns_to_process) {
-  # Extract the year from the column name
-  year <- sub(".*_(\\d{4})$", "\\1", column)
-  # Recode varaible
-  data <- data %>%
-    mutate(!!paste0("shift_", year) := recode(
-      .data[[column]], 
-      `1` = "regular_day", 
-      `2` = "regular_evening", 
-      `3` = "regular_night", 
-      `4` = "rotates_shift", 
-      `5` = "split_shift", 
-      `6` = "irregular", 
-      `7` = NA_character_
-    ))
+# Only keep names that actually exist in your data
+cols <- intersect(columns_to_process, names(data))
+
+# Create shift_<year> columns with recoded categories
+for (col in cols) {
+  year <- stringr::str_extract(col, "\\d{4}$")
+  data[[paste0("shift_", year)]] <- dplyr::recode(
+    as.character(data[[col]]),
+    "1" = "regular_day",
+    "2" = "regular_evening",
+    "3" = "regular_night",
+    "4" = "rotates_shift",
+    "5" = "split_shift",
+    "6" = "irregular",
+    "7" = NA_character_,
+    .default = NA_character_,
+    .missing = NA_character_
+  )
 }
+
 
 
 #------- from 2002 to 2022
 
 years <- c(2002, 2004, 2008, 2010, 2012, 2014, 2016, 2018, 2020, 2022)
 
-# Loop through years and create the corresponding shift_ variables for each year
 for (year in years) {
+  col_0_01 <- paste0("QES-86A_0.01_", year)  # indicator for regular day (1)
+  col_01   <- paste0("QES-86A.01_",  year)   # 2..6 categories
   
-  # Define the two column names for the current year
-  col_0_01 <- paste0("QES-86A_0.01_", year)
-  col_01 <- paste0("QES-86A.01_", year)
+  # Pull columns safely (or NAs if not present)
+  x0 <- if (col_0_01 %in% names(data)) data[[col_0_01]] else rep(NA, nrow(data))
+  x1 <- if (col_01   %in% names(data)) data[[col_01]]   else rep(NA, nrow(data))
   
-  # Apply the mutate and case_when for each year
-  data <- data %>%
-    mutate(!!paste0("shift_", year) := case_when(
-      # Checking first variable QES-86A_0.01_YYYY
-      !!sym(col_0_01) == 1 ~ "regular_day",
-      
-      # Checking second variable QES-86A.01_YYYY
-      !!sym(col_01) == 2 ~ "regular_evening",
-      !!sym(col_01) == 3 ~ "regular_night",
-      !!sym(col_01) == 4 ~ "rotates_shift",
-      !!sym(col_01) == 5 ~ "split_shift",
-      !!sym(col_01) == 6 ~ "irregular",
-      
-      # Default case if none of the conditions match
-      TRUE ~ NA_character_
-    ))
+  # Coerce to numeric safely (handles labelled/factors/characters)
+  x0 <- suppressWarnings(as.numeric(as.character(x0)))
+  x1 <- suppressWarnings(as.numeric(as.character(x1)))
+  
+  # Build the shift_<year> vector
+  data[[paste0("shift_", year)]] <- dplyr::case_when(
+    x0 == 1 ~ "regular_day",        # from the _0.01_ var
+    x1 == 2 ~ "regular_evening",    # from the .01 var
+    x1 == 3 ~ "regular_night",
+    x1 == 4 ~ "rotates_shift",
+    x1 == 5 ~ "split_shift",
+    x1 == 6 ~ "irregular",
+    x1 == 7 ~ NA_character_,        # explicit NA code if present
+    TRUE ~ NA_character_
+  )
 }
+
 
 #------- ID and demographic variables
 
@@ -142,7 +81,7 @@ data <- data %>%
   )
 
 
-#-------- TIME VARYING DMEOGRAPHICS
+#-------- TIME VARYING DEMOGRAPHICS
 
 #Rename number of children variable for easy reshaping afterwards
 years_children <- seq(1990, 2022, by = 1)
@@ -196,27 +135,26 @@ head(data_selected)
 #------------------------------------------------------------- #
 
 data_long <- data_selected %>%
-  pivot_longer(
-    cols = matches("^(shift_|DOI_EMPLOYED_|MARSTAT-KEY_|FAMSIZE_|HRP1_|NUMCH_|Q11-4_|JOBSNUM_|TNFI_TRUNC_)"),
+  tidyr::pivot_longer(
+    cols = tidyselect::matches("^(shift_|DOI_EMPLOYED_|MARSTAT-KEY_|FAMSIZE_|HRP1_|NUMCH_|Q11-4_|JOBSNUM_|TNFI_TRUNC_)"),
     names_to = c(".value", "year"),
-    names_pattern = "^(shift|DOI_EMPLOYED|MARSTAT-KEY|FAMSIZE|HRP1|NUMCH|Q11-4|JOBSNUM|TNFI_TRUNC)_(\\d+)"
+    names_pattern = "^(shift|DOI_EMPLOYED|MARSTAT-KEY|FAMSIZE|HRP1|NUMCH|Q11-4|JOBSNUM|TNFI_TRUNC)_(\\d{4})"
   ) %>%
-  mutate(year = as.numeric(year)) %>%
-  arrange(ID, year) %>%
-  filter(!is.na(shift)) %>%
-  filter(sex == 2) %>%
-  rename(
-    shift_type = shift,
-    employed = DOI_EMPLOYED,
+  dplyr::mutate(year = as.integer(year)) %>%
+  dplyr::arrange(ID, year) %>%
+  dplyr::filter(!is.na(shift), sex == 2) %>%
+  dplyr::rename(
+    shift_type     = shift,
+    employed       = DOI_EMPLOYED,
     marital_status = `MARSTAT-KEY`,
-    family_size = FAMSIZE,
-    hourlywage = HRP1,
-    num_children = NUMCH,
-    healthlimit=`Q11-4`,
-    numberjobs=JOBSNUM,
-    totalincome=TNFI_TRUNC
-    
+    family_size    = FAMSIZE,
+    hourlywage     = HRP1,
+    num_children   = NUMCH,
+    healthlimit    = `Q11-4`,
+    numberjobs     = JOBSNUM,
+    totalincome    = TNFI_TRUNC
   )
+
 
 
 #------------------------------------------------------------- #
@@ -232,8 +170,4 @@ data_long <- data_long %>%
 
 table(data_long$shift_type)
 
-#------------------------------------------------------------- #
-#------------------- SAVE DATA-------------------# 
-#------------------------------------------------------------- #
 
-save(data_long, file = "data_mothers.Rda")
